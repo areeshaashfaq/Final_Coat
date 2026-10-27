@@ -1,171 +1,49 @@
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
 #endif
 
 namespace FinalCoat
 {
-    /// <summary>The device a player controls their toy with. Chosen in Settings.</summary>
-    public enum ControlScheme { WASD, Arrows, Gamepad1, Gamepad2 }
+    /// <summary>Which half of the keyboard a player uses.</summary>
+    public enum ControlScheme { WASD, Arrows }
 
     public enum GameKey { Left, Right, Jump, Tug, Hold }
 
     /// <summary>
-    /// Reads input for one player from the device they picked.
+    /// Keyboard input for both players on one keyboard.
     ///
-    /// Keyboard left:  A / D move, W jump, S hold on, Left Shift strand
-    /// Keyboard right: Arrows move, Up jump, Down hold on, Right Shift strand
-    /// Controller:     Left stick or d-pad move, A jump, B hold on, X strand
+    /// Player 1: A / D move, W jump, S hold on, Left Shift strand
+    /// Player 2: Arrows move, Up jump, Down hold on, Right Shift strand
+    /// Shared:   Esc pause, R restart, F1 help.
     ///
-    /// Shared: Esc or Start pause, R or Y restart, M or Select main menu, F1 help.
-    /// Controllers need the new Input System, which this project uses.
+    /// Works with the new Input System (this project) or the old Input Manager.
     /// </summary>
     public static class ToyInput
     {
-        public const float StickDeadZone = 0.25f;
-
-        enum RawKey { A, D, W, S, LeftShift, LeftArrow, RightArrow, UpArrow, DownArrow, RightShift, Escape, R, M, F1 }
+        enum RawKey { A, D, W, S, LeftShift, LeftArrow, RightArrow, UpArrow, DownArrow, RightShift, Escape, R, F1 }
 
         // ---------------- Per player ----------------
 
         public static float Horizontal(ControlScheme scheme)
         {
-            if (IsGamepad(scheme)) return PadHorizontal(PadIndex(scheme));
-
             float x = 0f;
             if (Held(scheme, GameKey.Left)) x -= 1f;
             if (Held(scheme, GameKey.Right)) x += 1f;
             return x;
         }
 
-        public static bool Held(ControlScheme scheme, GameKey key)
-        {
-            if (IsGamepad(scheme)) return PadHeld(PadIndex(scheme), key);
-            return KeyHeld(Map(scheme, key));
-        }
+        public static bool Held(ControlScheme scheme, GameKey key) => KeyHeld(Map(scheme, key));
+        public static bool Pressed(ControlScheme scheme, GameKey key) => KeyPressed(Map(scheme, key));
+        public static bool Released(ControlScheme scheme, GameKey key) => KeyReleased(Map(scheme, key));
 
-        public static bool Pressed(ControlScheme scheme, GameKey key)
-        {
-            if (IsGamepad(scheme)) return PadPressed(PadIndex(scheme), key);
-            return KeyPressed(Map(scheme, key));
-        }
+        // ---------------- Shared keys ----------------
 
-        public static bool Released(ControlScheme scheme, GameKey key)
-        {
-            if (IsGamepad(scheme)) return PadReleased(PadIndex(scheme), key);
-            return KeyReleased(Map(scheme, key));
-        }
-
-        public static bool IsGamepad(ControlScheme scheme) => scheme == ControlScheme.Gamepad1 || scheme == ControlScheme.Gamepad2;
-        static int PadIndex(ControlScheme scheme) => scheme == ControlScheme.Gamepad2 ? 1 : 0;
-
-        // ---------------- Shared buttons ----------------
-
-        public static bool PausePressed => KeyPressed(RawKey.Escape) || AnyPad(PadButton.Start);
-        public static bool RestartPressed => KeyPressed(RawKey.R) || AnyPad(PadButton.North);
-        public static bool MenuPressed => KeyPressed(RawKey.M) || AnyPad(PadButton.Select);
+        public static bool PausePressed => KeyPressed(RawKey.Escape);
+        public static bool RestartPressed => KeyPressed(RawKey.R);
         public static bool HelpPressed => KeyPressed(RawKey.F1);
-        /// <summary>Back out of a menu screen: Esc or B.</summary>
-        public static bool BackPressed => KeyPressed(RawKey.Escape) || AnyPad(PadButton.East);
 
-        // ---------------- Controllers ----------------
-
-        enum PadButton { South, East, West, North, Start, Select }
-
-        public static int ConnectedGamepads
-        {
-            get
-            {
-#if ENABLE_INPUT_SYSTEM
-                return Gamepad.all.Count;
-#else
-                return 0;
-#endif
-            }
-        }
-
-        public static bool IsConnected(ControlScheme scheme) => !IsGamepad(scheme) || PadIndex(scheme) < ConnectedGamepads;
-
-#if ENABLE_INPUT_SYSTEM
-        static Gamepad Pad(int index)
-        {
-            var all = Gamepad.all;
-            return index < all.Count ? all[index] : null;
-        }
-
-        static ButtonControl Button(Gamepad pad, PadButton button)
-        {
-            switch (button)
-            {
-                case PadButton.South: return pad.buttonSouth;
-                case PadButton.East: return pad.buttonEast;
-                case PadButton.West: return pad.buttonWest;
-                case PadButton.North: return pad.buttonNorth;
-                case PadButton.Start: return pad.startButton;
-                default: return pad.selectButton;
-            }
-        }
-
-        static float PadHorizontal(int index)
-        {
-            var pad = Pad(index);
-            if (pad == null) return 0f;
-            float x = pad.leftStick.x.ReadValue();
-            if (Mathf.Abs(x) < StickDeadZone) x = 0f;
-            if (pad.dpad.left.isPressed) x = -1f;
-            if (pad.dpad.right.isPressed) x = 1f;
-            return Mathf.Clamp(x, -1f, 1f);
-        }
-
-        static ButtonControl PadKey(Gamepad pad, GameKey key)
-        {
-            switch (key)
-            {
-                case GameKey.Jump: return pad.buttonSouth; // A
-                case GameKey.Hold: return pad.buttonEast;  // B
-                case GameKey.Tug: return pad.buttonWest;   // X
-                case GameKey.Left: return pad.dpad.left;
-                default: return pad.dpad.right;
-            }
-        }
-
-        static bool PadHeld(int index, GameKey key)
-        {
-            var pad = Pad(index);
-            if (pad == null) return false;
-            if (key == GameKey.Left) return PadHorizontal(index) < 0f;
-            if (key == GameKey.Right) return PadHorizontal(index) > 0f;
-            return PadKey(pad, key).isPressed;
-        }
-
-        static bool PadPressed(int index, GameKey key)
-        {
-            var pad = Pad(index);
-            return pad != null && PadKey(pad, key).wasPressedThisFrame;
-        }
-
-        static bool PadReleased(int index, GameKey key)
-        {
-            var pad = Pad(index);
-            return pad != null && PadKey(pad, key).wasReleasedThisFrame;
-        }
-
-        static bool AnyPad(PadButton button)
-        {
-            foreach (var pad in Gamepad.all)
-                if (Button(pad, button).wasPressedThisFrame) return true;
-            return false;
-        }
-#else
-        static float PadHorizontal(int index) => 0f;
-        static bool PadHeld(int index, GameKey key) => false;
-        static bool PadPressed(int index, GameKey key) => false;
-        static bool PadReleased(int index, GameKey key) => false;
-        static bool AnyPad(PadButton button) => false;
-#endif
-
-        // ---------------- Keyboard ----------------
+        // ---------------- Key mapping ----------------
 
         static RawKey Map(ControlScheme scheme, GameKey key)
         {
@@ -208,7 +86,6 @@ namespace FinalCoat
                 case RawKey.RightShift: return Key.RightShift;
                 case RawKey.Escape: return Key.Escape;
                 case RawKey.R: return Key.R;
-                case RawKey.M: return Key.M;
                 default: return Key.F1;
             }
         }
@@ -247,7 +124,6 @@ namespace FinalCoat
                 case RawKey.RightShift: return KeyCode.RightShift;
                 case RawKey.Escape: return KeyCode.Escape;
                 case RawKey.R: return KeyCode.R;
-                case RawKey.M: return KeyCode.M;
                 default: return KeyCode.F1;
             }
         }

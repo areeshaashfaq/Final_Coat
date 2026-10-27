@@ -44,18 +44,6 @@ namespace FinalCoat
 
         void OnStrandChanged(bool snapped) => strandSnapped = snapped;
 
-        void Start()
-        {
-            showControls = showControls && GameSettings.ShowControlsHelp;
-
-            // Warn straight away if someone picked a controller that is not plugged in.
-            var gm = GameManager.Instance;
-            if (gm == null) return;
-            foreach (var toy in gm.toys)
-                if (toy != null && !ToyInput.IsConnected(toy.controls))
-                    OnNotice($"{GameSettings.DeviceName(toy.controls)} is not connected. Change Player {toy.playerIndex + 1}'s controls in Settings");
-        }
-
         void Update()
         {
             if (ToyInput.HelpPressed) showControls = !showControls;
@@ -114,7 +102,7 @@ namespace FinalCoat
 
             if (showControls) DrawControls();
 
-            if (gm.IsPaused) DrawOverlay("PAUSED", "Esc / Start  resume     R / Y  restart     M / Select  main menu");
+            if (gm.IsPaused) DrawOverlay("PAUSED", "Esc  resume     R  restart");
             if (gm.IsLevelComplete) DrawLevelComplete(gm);
         }
 
@@ -153,20 +141,14 @@ namespace FinalCoat
 
         void DrawControls()
         {
-            var gm = GameManager.Instance;
-            var text = new System.Text.StringBuilder();
-            foreach (var toy in gm.toys)
-            {
-                if (toy == null) continue;
-                text.Append($"P{toy.playerIndex + 1} on {GameSettings.DeviceName(toy.controls)}:  {GameSettings.ControlsHelp(toy.controls)}");
-                if (!ToyInput.IsConnected(toy.controls)) text.Append("   (NOT CONNECTED)");
-                text.Append('\n');
-            }
-            text.Append("Strand button: tap = tug, hold 1s = snap, tap near partner = rejoin.   Esc / Start pause,  F1 hide help");
+            string text =
+                "P1: A / D move,  W jump,  S hold on,  Left Shift strand\n" +
+                "P2: Arrows move,  Up jump,  Down hold on,  Right Shift strand\n" +
+                "Strand button: tap = tug, hold 1s = snap, tap near partner = rejoin.   Esc pause,  F1 hide help";
 
             var r = new Rect(16f, Screen.height - 76f, Screen.width - 32f, 62f);
             Fill(r, new Color(0f, 0f, 0f, 0.5f));
-            GUI.Label(new Rect(r.x + 10f, r.y + 6f, r.width - 20f, r.height - 12f), text.ToString(), body);
+            GUI.Label(new Rect(r.x + 10f, r.y + 6f, r.width - 20f, r.height - 12f), text, body);
         }
 
         void DrawOverlay(string heading, string sub)
@@ -182,7 +164,7 @@ namespace FinalCoat
             string result = leader < 0
                 ? "It's a tie! Nobody gets the final coat... yet"
                 : $"Player {leader + 1} is the most painted toy with {gm.GetScore(leader)} paint!";
-            DrawOverlay("LEVEL COMPLETE", result + "\nR / Y  play again     M / Select  main menu");
+            DrawOverlay("LEVEL COMPLETE", result + "\nPress R to play again");
         }
     }
 }

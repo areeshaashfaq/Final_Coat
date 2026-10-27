@@ -12,11 +12,9 @@ namespace FinalCoat
     {
         [Header("Identity")]
         public int playerIndex;
-        [Tooltip("Overwritten at start by the device picked in Settings")]
         public ControlScheme controls;
-        public bool useSavedControls = true;
         public Color paintColor = Color.red;
-        [Tooltip("Child that holds the sprites. It is squashed and stretched as a simple animation.")]
+        [Tooltip("Child that holds the sprites. Flipped to face the way the toy moves.")]
         public Transform visual;
 
         [Header("Running")]
@@ -28,10 +26,6 @@ namespace FinalCoat
         [Header("Jumping")]
         public float jumpVelocity = 12.5f;
         public float fallGravityMultiplier = 1.6f;
-        [Tooltip("Grace time after walking off a ledge where a jump still works")]
-        public float coyoteTime = 0.1f;
-        [Tooltip("A jump pressed just before landing still happens")]
-        public float jumpBuffer = 0.12f;
 
         [Header("Strand button")]
         [Tooltip("Press shorter than this = tug (or rejoin when snapped)")]
@@ -61,8 +55,7 @@ namespace FinalCoat
 
         float moveInput;
         bool holdInput;
-        float lastGroundedTime = -10f;
-        float lastJumpPressTime = -10f;
+        bool jumpPressed;
 
         bool tugDown;
         bool snapTriggered;
@@ -71,7 +64,6 @@ namespace FinalCoat
         float invulnerableUntil;
 
         Vector3 visualBaseScale = Vector3.one;
-        float squash; // above 0 stretches tall, below 0 squashes flat
         SpriteRenderer[] visualRenderers;
 
         // Reused every physics step, so the ground check allocates no memory.
@@ -82,7 +74,6 @@ namespace FinalCoat
         {
             Body = GetComponent<Rigidbody2D>();
             box = GetComponent<BoxCollider2D>();
-            if (useSavedControls) controls = GameSettings.GetControls(playerIndex);
 
             Body.freezeRotation = true;
             Body.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -114,7 +105,7 @@ namespace FinalCoat
 
             if (!locked)
             {
-                if (ToyInput.Pressed(controls, GameKey.Jump)) lastJumpPressTime = Time.time;
+                if (ToyInput.Pressed(controls, GameKey.Jump)) jumpPressed = true;
                 HandleStrandButton();
             }
 
@@ -195,17 +186,9 @@ namespace FinalCoat
                 // In the air with no input, keep the momentum so swings feel natural.
             }
 
-            if (IsGrounded) lastGroundedTime = Time.time;
-
-            bool coyoteOk = Time.time - lastGroundedTime <= coyoteTime;
-            bool jumpQueued = Time.time - lastJumpPressTime <= jumpBuffer;
-            if (coyoteOk && jumpQueued && !IsHolding)
-            {
-                v.y = jumpVelocity;
-                lastJumpPressTime = -10f;
-                lastGroundedTime = -10f;
-                squash = 0.25f;
-            }
+            // Only jumps if you are on the ground at the moment you press.
+            if (jumpPressed && IsGrounded && !IsHolding) v.y = jumpVelocity;
+            jumpPressed = false;
 
             // Fall faster than you rise, which makes jumps feel less floaty.
             Body.gravityScale = v.y < 0f ? baseGravity * fallGravityMultiplier : baseGravity;
@@ -214,7 +197,6 @@ namespace FinalCoat
 
         void CheckGround()
         {
-            bool wasGrounded = IsGrounded;
             Bounds b = box.bounds;
             Vector2 center = new Vector2(b.center.x, b.min.y - 0.04f);
             Vector2 size = new Vector2(b.size.x * 0.85f, 0.08f);
@@ -231,9 +213,6 @@ namespace FinalCoat
                     break;
                 }
             }
-
-            if (IsGrounded && !wasGrounded && Body.GetVelocity().y <= 0.1f)
-                squash = -0.22f; // landing squash
         }
 
         /// <summary>Called by enemies. Knocks the toy back and asks the GameManager to drop paint.</summary>
@@ -248,7 +227,6 @@ namespace FinalCoat
             away.x = Mathf.Abs(away.x) < 0.01f ? Facing * -1f : away.x;
             away.y = Mathf.Max(away.y, 0.6f);
             Body.SetVelocity(away.normalized * knockbackSpeed);
-            squash = -0.3f;
 
             gm.OnToyHit(this);
         }
@@ -261,23 +239,12 @@ namespace FinalCoat
             invulnerableUntil = Time.time + invulnerableTime;
         }
 
-        // Code-driven animation for the prototype: squash and stretch, a running wobble,
-        // facing direction and a blink while invulnerable. Sprite animations replace this later.
+        // Faces the way the toy is moving and blinks while invulnerable.
         void AnimateVisual()
         {
             if (visual == null) return;
 
-            squash = Mathf.MoveTowards(squash, 0f, Time.deltaTime * 1.5f);
-            float s = IsHolding ? -0.15f : squash;
-
-            bool running = IsGrounded && Mathf.Abs(moveInput) > 0.01f;
-            float wobble = running ? Mathf.Sin(Time.time * 18f) * 0.05f : Mathf.Sin(Time.time * 3f) * 0.02f;
-
-            visual.localScale = new Vector3(
-                visualBaseScale.x * (1f - s) * Facing,
-                visualBaseScale.y * (1f + s + wobble),
-                1f);
-            visual.localRotation = Quaternion.Euler(0f, 0f, IsGrounded ? 0f : -moveInput * 8f);
+            visual.localScale = new Vector3(visualBaseScale.x * Facing, visualBaseScale.y, 1f);
 
             if (visualRenderers != null)
             {
