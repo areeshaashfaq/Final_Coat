@@ -1,32 +1,15 @@
 using UnityEngine;
+
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+
 #endif
-
-namespace FinalCoat
-{
-    /// <summary>Which half of the keyboard a player uses.</summary>
+namespace FinalCoat{
     public enum ControlScheme { WASD, Arrows }
-
     public enum GameKey { Left, Right, Jump, Tug, Hold }
-
-    /// <summary>
-    /// Keyboard input for both players on one keyboard.
-    ///
-    /// Player 1: A / D move, W jump, S hold on, Left Shift strand
-    /// Player 2: Arrows move, Up jump, Down hold on, Right Shift strand
-    /// Shared:   Esc pause, R restart, F1 help.
-    ///
-    /// Works with the new Input System (this project) or the old Input Manager.
-    /// </summary>
-    public static class ToyInput
-    {
+    public static class ToyInput{
         enum RawKey { A, D, W, S, LeftShift, LeftArrow, RightArrow, UpArrow, DownArrow, RightShift, Escape, R, F1 }
-
-        // ---------------- Per player ----------------
-
-        public static float Horizontal(ControlScheme scheme)
-        {
+        public static float Horizontal(ControlScheme scheme){
             float x = 0f;
             if (Held(scheme, GameKey.Left)) x -= 1f;
             if (Held(scheme, GameKey.Right)) x += 1f;
@@ -36,21 +19,12 @@ namespace FinalCoat
         public static bool Held(ControlScheme scheme, GameKey key) => KeyHeld(Map(scheme, key));
         public static bool Pressed(ControlScheme scheme, GameKey key) => KeyPressed(Map(scheme, key));
         public static bool Released(ControlScheme scheme, GameKey key) => KeyReleased(Map(scheme, key));
-
-        // ---------------- Shared keys ----------------
-
         public static bool PausePressed => KeyPressed(RawKey.Escape);
         public static bool RestartPressed => KeyPressed(RawKey.R);
         public static bool HelpPressed => KeyPressed(RawKey.F1);
-
-        // ---------------- Key mapping ----------------
-
-        static RawKey Map(ControlScheme scheme, GameKey key)
-        {
-            if (scheme == ControlScheme.WASD)
-            {
-                switch (key)
-                {
+        static RawKey Map(ControlScheme scheme, GameKey key){
+            if (scheme == ControlScheme.WASD){
+                switch (key){
                     case GameKey.Left: return RawKey.A;
                     case GameKey.Right: return RawKey.D;
                     case GameKey.Jump: return RawKey.W;
@@ -58,9 +32,7 @@ namespace FinalCoat
                     default: return RawKey.S;
                 }
             }
-
-            switch (key)
-            {
+            switch (key){
                 case GameKey.Left: return RawKey.LeftArrow;
                 case GameKey.Right: return RawKey.RightArrow;
                 case GameKey.Jump: return RawKey.UpArrow;
@@ -70,10 +42,8 @@ namespace FinalCoat
         }
 
 #if ENABLE_INPUT_SYSTEM
-        static Key ToKey(RawKey key)
-        {
-            switch (key)
-            {
+        static Key ToKey(RawKey key){
+            switch (key){
                 case RawKey.A: return Key.A;
                 case RawKey.D: return Key.D;
                 case RawKey.W: return Key.W;
@@ -90,28 +60,24 @@ namespace FinalCoat
             }
         }
 
-        static bool KeyHeld(RawKey key)
-        {
+        static bool KeyHeld(RawKey key){
             var keyboard = Keyboard.current;
             return keyboard != null && keyboard[ToKey(key)].isPressed;
         }
 
-        static bool KeyPressed(RawKey key)
-        {
+        static bool KeyPressed(RawKey key){
             var keyboard = Keyboard.current;
             return keyboard != null && keyboard[ToKey(key)].wasPressedThisFrame;
         }
 
-        static bool KeyReleased(RawKey key)
-        {
+        static bool KeyReleased(RawKey key){
             var keyboard = Keyboard.current;
             return keyboard != null && keyboard[ToKey(key)].wasReleasedThisFrame;
         }
+
 #else
-        static KeyCode ToKeyCode(RawKey key)
-        {
-            switch (key)
-            {
+        static KeyCode ToKeyCode(RawKey key){
+            switch (key){
                 case RawKey.A: return KeyCode.A;
                 case RawKey.D: return KeyCode.D;
                 case RawKey.W: return KeyCode.W;
