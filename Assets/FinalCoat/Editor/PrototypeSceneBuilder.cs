@@ -79,13 +79,10 @@ namespace FinalCoat.EditorTools
             MakeWindUp("Wind-up Toy A", new Vector2(18f, 0.4f), 2f, enemies);
             MakeWindUp("Wind-up Toy B", new Vector2(34f, 0.4f), 2.5f, enemies);
 
-            var pool = MakePool();
-
             var managers = new GameObject("Game Manager");
             var gm = managers.AddComponent<GameManager>();
             gm.toys = new[] { p1, p2 };
             gm.strand = strand;
-            gm.blobPool = pool;
             gm.startPoint = start;
             managers.AddComponent<PrototypeHUD>();
 
@@ -121,11 +118,11 @@ namespace FinalCoat.EditorTools
             Box("Seesaw Pillar", new Vector2(24f, -2.6f), new Vector2(0.4f, 4f), Shelf, parent);
             var plank = Box("Seesaw Plank", new Vector2(24f, -0.25f), new Vector2(5.6f, 0.3f), Crate, parent);
             var plankBody = plank.AddComponent<Rigidbody2D>();
-            plankBody.mass = 2f;
-            plankBody.gravityScale = 2.5f;
+            plankBody.mass = 0.6f;
+            plankBody.gravityScale = 1.5f;
             var hinge = plank.AddComponent<HingeJoint2D>();
             hinge.useLimits = true;
-            hinge.limits = new JointAngleLimits2D { min = -22f, max = 22f };
+            hinge.limits = new JointAngleLimits2D { min = -35f, max = 35f };
 
             // Checkpoint flag
             var checkpoint = new GameObject("Checkpoint");
@@ -174,10 +171,10 @@ namespace FinalCoat.EditorTools
             ball.transform.localScale = new Vector3(0.9f, 0.9f, 1f);
             var col = ball.AddComponent<CircleCollider2D>();
             col.radius = 0.5f;
-            col.sharedMaterial = SaveMaterial("Bouncy", 0.4f, 0.35f);
+            col.sharedMaterial = SaveMaterial("Ball Bouncy", 0.05f, 0.75f);
             var rb = ball.AddComponent<Rigidbody2D>();
-            rb.mass = 1.5f;
-            rb.gravityScale = 2.5f;
+            rb.mass = 0.8f;
+            rb.gravityScale = 2f;
             ball.AddComponent<Respawnable>();
         }
 
@@ -290,14 +287,11 @@ namespace FinalCoat.EditorTools
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.gravityScale = 2f;
-            rb.bodyType = kind == BlobKind.Dropped ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
+            rb.bodyType = RigidbodyType2D.Kinematic;
 
             var trigger = go.AddComponent<CircleCollider2D>();
             trigger.isTrigger = true;
             trigger.radius = size * 0.6f;
-            var solid = go.AddComponent<CircleCollider2D>();
-            solid.radius = size * 0.3f;
-            solid.enabled = kind == BlobKind.Dropped;
 
             var visual = new GameObject("Visual").transform;
             visual.SetParent(go.transform, false);
@@ -316,19 +310,7 @@ namespace FinalCoat.EditorTools
             blob.value = value;
             blob.visual = visual;
             blob.pickupTrigger = trigger;
-            blob.solidCollider = solid;
             return blob;
-        }
-
-        static PaintBlobPool MakePool()
-        {
-            var poolGo = new GameObject("Paint Blob Pool");
-            var pool = poolGo.AddComponent<PaintBlobPool>();
-            var template = MakeBlob("Dropped Blob Template", Vector2.zero, BlobKind.Dropped, 10,
-                new Color(0.95f, 0.95f, 0.95f), 0.35f, poolGo.transform);
-            template.gameObject.SetActive(false);
-            pool.template = template;
-            return pool;
         }
 
         static void MakeCrate(string name, Vector2 position, Transform parent)
@@ -336,8 +318,8 @@ namespace FinalCoat.EditorTools
             var crate = Box(name, position, Vector2.one, Crate, parent, 4);
             Shape("Lid", square, crate.transform, new Vector2(0f, 0.4f), new Vector2(1f, 0.12f), Shelf, 5);
             var rb = crate.AddComponent<Rigidbody2D>();
-            rb.mass = 2f;
-            rb.gravityScale = 2.5f;
+            rb.mass = 1f;
+            rb.gravityScale = 2.5f; // rotation is not frozen, so crates tip and tumble
             crate.AddComponent<Respawnable>();
         }
 

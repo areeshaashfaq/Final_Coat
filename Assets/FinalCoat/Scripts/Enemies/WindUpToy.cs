@@ -67,7 +67,6 @@ namespace FinalCoat
             box = GetComponent<BoxCollider2D>();
             Body.freezeRotation = true;
             normalMass = Body.mass;
-            showStateLabel = showStateLabel && GameSettings.ShowEnemyStates;
             spawnPoint = transform.position;
             Home = spawnPoint;
 
