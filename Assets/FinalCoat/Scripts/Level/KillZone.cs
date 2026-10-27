@@ -20,9 +20,6 @@ namespace FinalCoat
             var enemy = other.GetComponentInParent<WindUpToy>();
             if (enemy != null) { enemy.ResetToHome(); return; }
 
-            var blob = other.GetComponentInParent<PaintBlob>();
-            if (blob != null) { blob.Despawn(); return; }
-
             var prop = other.GetComponentInParent<Respawnable>();
             if (prop != null) prop.ResetToStart();
         }

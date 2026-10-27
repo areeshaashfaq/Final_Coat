@@ -12,12 +12,9 @@ namespace FinalCoat
     {
         public static GameManager Instance { get; private set; }
 
-        public const string MainMenuScene = "MainMenu";
-
         [Header("Scene references")]
         public ToyController[] toys;
         public PaintStrand strand;
-        public PaintBlobPool blobPool;
         public Transform startPoint;
 
         [Header("Paint rules (starting values, tune after playtests)")]
@@ -26,7 +23,6 @@ namespace FinalCoat
         public int fallLossJoined = 10;
         public int fallLossSolo = 30;
         public int firstToExitBonus = 25;
-        public int droppedBlobValue = 10;
 
         [Tooltip("Paint needed to reach each of the 4 colour stages")]
         public int[] stageThresholds = { 0, 40, 100, 180 };
@@ -73,24 +69,7 @@ namespace FinalCoat
         void Update()
         {
             if (ToyInput.PausePressed && !IsLevelComplete) SetPaused(!IsPaused);
-            if (IsPaused || IsLevelComplete)
-            {
-                if (ToyInput.RestartPressed) Restart();
-                else if (ToyInput.MenuPressed) GoToMainMenu();
-            }
-        }
-
-        public bool CanGoToMainMenu => Application.CanStreamedLevelBeLoaded(MainMenuScene);
-
-        public void GoToMainMenu()
-        {
-            if (!CanGoToMainMenu)
-            {
-                GameEvents.RaiseNotice("Build the main menu first: Final Coat > Build Main Menu Scene");
-                return;
-            }
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(MainMenuScene);
+            if (ToyInput.RestartPressed && (IsPaused || IsLevelComplete)) Restart();
         }
 
         public void SetPaused(bool paused)
@@ -161,11 +140,9 @@ namespace FinalCoat
         public void OnToyHit(ToyController toy)
         {
             int lost = RemovePaint(toy, IsSolo ? hitLossSolo : hitLossJoined);
-            if (lost > 0 && blobPool != null)
-                blobPool.Spray(toy.transform.position, lost, droppedBlobValue, toy.paintColor);
 
             GameEvents.RaiseNotice(lost > 0
-                ? $"Player {toy.playerIndex + 1} got hit and dropped {lost} paint. Grab it!"
+                ? $"Player {toy.playerIndex + 1} got hit and lost {lost} paint"
                 : $"Player {toy.playerIndex + 1} got hit");
         }
 
